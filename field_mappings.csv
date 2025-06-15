@@ -1,0 +1,10 @@
+column_name,table_name,system_a_fieldmap,system_b_fieldmap,field_description,field_type,join_key,foreign_table,foreign_key
+user_id,users,uid,user_identifier,Unique identifier for user,INTEGER,,,
+email,users,email_addr,user_email,User email address,VARCHAR,,,
+order_id,orders,order_num,transaction_id,Unique order identifier,INTEGER,,,
+user_id,orders,customer_id,user_ref,User who placed order,INTEGER,user_id,users,user_id
+total_amount,orders,order_total,amount,Total order value in cents,INTEGER,,,
+product_name,products,name,product_title,Product display name,VARCHAR,,,
+order_item_id,order_items,item_id,line_item_id,Order line item identifier,INTEGER,,,
+order_id,order_items,order_ref,order_reference,Reference to parent order,INTEGER,order_id,orders,order_id
+product_id,order_items,prod_id,product_reference,Reference to product,INTEGER,product_id,products,product_id
