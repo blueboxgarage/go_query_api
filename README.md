@@ -84,15 +84,38 @@ product_id,order_items,prod_id,product_reference,Reference to product,INTEGER,pr
 - **Configuration**: Environment variables or YAML config
 
 ### **Required Dependencies**
-- HTTP web framework (gin-gonic/gin recommended)
-- Fuzzy string matching library (lithammer/fuzzysearch)
-- Logging library (sirupsen/logrus or built-in slog)
-- Testing utilities (stretchr/testify)
+- HTTP web framework: [gin-gonic/gin](https://github.com/gin-gonic/gin) v1.9.1
+- Fuzzy string matching: [lithammer/fuzzysearch](https://github.com/lithammer/fuzzysearch) v1.1.8
+- Logging: [sirupsen/logrus](https://github.com/sirupsen/logrus) v1.9.3
+- Testing: [stretchr/testify](https://github.com/stretchr/testify) (for testing)
 
-### **API Endpoints Required**
+To install dependencies:
+```bash
+go mod download github.com/gin-gonic/gin
+go get github.com/lithammer/fuzzysearch/fuzzy
+go get github.com/sirupsen/logrus
+```
+
+### **API Endpoints**
 1. `POST /api/v1/generate-query` - Main query generation
+   - Request body:
+     ```json
+     {
+       "description": "get orders with total order value",
+       "system": "SystemA",
+       "limit": 10
+     }
+     ```
+   - Required fields: `description`
+   - Optional fields: `system`, `limit`
+   - Response: Generated SQL query, matched fields, joins used, confidence score, and processing time
+
 2. `GET /health` - Health check
+   - Returns status 200 OK if the service is running properly
+
 3. `GET /api/v1/fields` - List available field mappings
+   - Optional query param: `system` (e.g., `?system=SystemA`)
+   - Returns all field mappings, optionally filtered by system
 
 ## 🏗 Architecture Requirements
 
@@ -312,11 +335,121 @@ The implementation is complete when:
 
 ## 🚀 Getting Started Guide
 
-1. Initialize Go module and set up project structure
-2. Implement CSV loading and basic data structures first
-3. Create simple HTTP server with Gin framework
-4. Build field matching logic incrementally
-5. Add query generation capabilities step by step
-6. Test thoroughly with various natural language inputs
+### Installation and Dependencies
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/go_query_api.git
+cd go_query_api
+
+# Install required dependencies
+go mod download github.com/gin-gonic/gin
+go get github.com/lithammer/fuzzysearch/fuzzy
+go get github.com/sirupsen/logrus
+```
+
+### Build and Run
+
+```bash
+# Using Make (recommended)
+make build     # Build the application
+make run       # Run the application
+make help      # Show all available make commands
+
+# Manual build and run
+go build -o query-api ./main.go
+./query-api
+
+# Run directly without building
+go run main.go
+```
+
+### Command-Line Options
+
+The application supports the following command-line flags:
+
+```
+-port string    Server port (overrides config)
+-csv string     Path to field mappings CSV (overrides config)
+-debug          Enable debug mode
+-help           Show help message
+-version        Show version information
+```
+
+Example usage:
+```bash
+./query-api --port 9000 --csv ./custom_fields.csv --debug
+```
+
+### Testing
+
+```bash
+# Using Make (recommended)
+make test       # Run all tests
+make fmt        # Format code
+make lint       # Run linter
+
+# Manual testing
+go test ./...
+go test ./tests/field_service_test.go
+go test ./tests/query_service_test.go
+go test ./tests/handlers_test.go
+
+# Format code manually
+gofmt -w .
+
+# Run linter manually (if golangci-lint is installed)
+golangci-lint run
+```
+
+### Making API Requests
+
+1. List all available fields:
+```bash
+# Create a simple HTTP client
+go run client.go
+```
+
+2. Generate a query from natural language:
+```bash
+# Create a request with a description
+go run test_query.go
+```
+
+Sample request payload:
+```json
+{
+  "description": "get orders with total order value",
+  "system": "SystemA",
+  "limit": 10
+}
+```
+
+Sample response:
+```json
+{
+  "query": "SELECT orders.total_amount FROM orders o LIMIT 10",
+  "matched_fields": [
+    {
+      "column_name": "total_amount",
+      "table_name": "orders",
+      "field_description": "Total order value in cents",
+      "match_score": 75
+    }
+  ],
+  "joins_used": null,
+  "confidence": 25,
+  "processing_time_ms": 0
+}
+```
+
+For more complex queries with JOINs:
+```json
+{
+  "description": "get order line item identifiers with product display name",
+  "system": "SystemB",
+  "limit": 20
+}
+```
 
 **Focus on getting basic functionality working before adding advanced features. Start simple and iterate.**
