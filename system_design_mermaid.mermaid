@@ -1,205 +1,68 @@
 graph TB
-    %% External Components
-    Client[👤 Client Applications]
+    %% External Input/Output
+    Client[👤 Client Request]
     CSV[📊 field_mappings.csv]
-    DB[(🗄️ PostgreSQL Database)]
-    Monitoring[📊 Grafana/Prometheus]
     
-    %% Load Balancer & Gateway
-    subgraph "🌐 Infrastructure"
-        LoadBalancer[⚖️ Load Balancer/nginx]
-        Gateway[🚪 API Gateway]
+    %% Core Go Application Flow
+    subgraph "🐹 Go Query Generator API"
+        %% HTTP Layer
+        GinServer[🚀 Gin HTTP Server]
+        QueryHandler[⚡ POST /generate-query]
+        
+        %% Core Processing
+        CSVLoader[📄 CSV Loader]
+        FieldMatcher[🔍 Field Matcher]
+        NLPProcessor[🎯 NLP Processor]
+        QueryBuilder[🏗️ SQL Query Builder]
+        
+        %% Data Storage
+        FieldMappings[📦 Field Mappings Cache]
     end
     
-    %% Go Application
-    subgraph "🐹 Go Application (Gin Framework)"
-        subgraph "🚀 HTTP Server Layer"
-            GinEngine[🚀 Gin HTTP Engine]
-            Router[🔀 Gin Router]
-            MiddlewareStack[🛡️ Middleware Stack]
-        end
-        
-        subgraph "📋 HTTP Handlers"
-            HealthHandler[❤️ Health Handler]
-            QueryHandler[⚡ Query Generator Handler]
-            FieldsHandler[📋 Fields List Handler]
-            MetricsHandler[📊 Metrics Handler]
-        end
-        
-        subgraph "🏪 Application Services"
-            AppConfig[⚙️ Config Manager]
-            FieldMatcherSvc[🔍 Field Matcher Service]
-            NLPProcessorSvc[🎯 NLP Processor Service]
-            QueryGeneratorSvc[🏗️ Query Generator Service]
-            CSVLoaderSvc[📄 CSV Loader Service]
-        end
-        
-        subgraph "🧠 Processing Engines"
-            KeywordExtractor[📝 Keyword Extractor]
-            FuzzyStringMatcher[🎯 Fuzzy String Matcher]
-            IntentDetector[🧭 Intent Detector]
-            ConfidenceCalculator[📊 Confidence Calculator]
-            SQLQueryBuilder[🏗️ SQL Query Builder]
-        end
-        
-        subgraph "💾 Data Management"
-            CSVParser[📊 CSV Parser]
-            FieldMappingsCache[📦 Field Mappings Cache]
-            QueryResultCache[⚡ Query Result Cache]
-            ConfigStore[⚙️ Configuration Store]
-        end
-        
-        subgraph "🔧 Utilities & Helpers"
-            Logger[📝 Structured Logger]
-            ErrorHandler[❌ Error Handler]
-            Validator[✅ Input Validator]
-            ResponseBuilder[📋 Response Builder]
-        end
-        
-        subgraph "🔗 External Connectors"
-            PostgreSQLClient[🐘 PostgreSQL Client]
-            MetricsCollector[📊 Metrics Collector]
-            HealthChecker[❤️ Health Checker]
-        end
-    end
+    %% Request Flow
+    Client -->|"{ description: 'get user emails' }"| GinServer
+    GinServer --> QueryHandler
     
-    %% Monitoring & Observability
-    subgraph "📊 Observability Stack"
-        RequestTracing[🔍 Request Tracing]
-        StructuredLogs[📝 Structured Logging]
-        PrometheusMetrics[📊 Prometheus Metrics]
-        APMTracing[🔄 APM/Distributed Tracing]
-    end
+    %% Initialization Flow
+    CSV -->|Load on startup| CSVLoader
+    CSVLoader --> FieldMappings
     
-    %% Main Request Flow
-    Client -->|HTTP Requests| LoadBalancer
-    LoadBalancer --> Gateway
-    Gateway -->|Route to Instance| GinEngine
-    
-    %% Application Startup Flow
-    CSV -->|Load at Startup| CSVLoaderSvc
-    CSVLoaderSvc --> CSVParser
-    CSVParser -->|Parse & Validate| FieldMappingsCache
-    FieldMappingsCache --> FieldMatcherSvc
-    AppConfig --> ConfigStore
-    ConfigStore --> GinEngine
-    
-    %% HTTP Request Processing
-    GinEngine --> Router
-    Router --> MiddlewareStack
-    MiddlewareStack -->|CORS, Logging, Auth| HealthHandler
-    MiddlewareStack --> QueryHandler
-    MiddlewareStack --> FieldsHandler
-    MiddlewareStack --> MetricsHandler
-    
-    %% Query Generation Flow
-    QueryHandler -->|Validate Request| Validator
-    QueryHandler --> FieldMatcherSvc
-    QueryHandler --> NLPProcessorSvc
-    QueryHandler --> QueryGeneratorSvc
-    
-    %% Field Matching Pipeline
-    FieldMatcherSvc --> FieldMappingsCache
-    FieldMatcherSvc --> FuzzyStringMatcher
-    FieldMatcherSvc --> ConfidenceCalculator
-    
-    %% NLP Processing Pipeline
-    NLPProcessorSvc --> KeywordExtractor
-    NLPProcessorSvc --> IntentDetector
-    KeywordExtractor --> FuzzyStringMatcher
-    IntentDetector --> QueryGeneratorSvc
-    
-    %% Query Generation Pipeline
-    QueryGeneratorSvc --> SQLQueryBuilder
-    QueryGeneratorSvc --> ConfidenceCalculator
-    SQLQueryBuilder --> ResponseBuilder
-    
-    %% Caching Layer
-    FieldMatcherSvc --> QueryResultCache
-    QueryGeneratorSvc --> QueryResultCache
-    
-    %% Database Integration (Optional)
-    SQLQueryBuilder -.->|Validate Schema| PostgreSQLClient
-    PostgreSQLClient -.->|Schema Info| DB
-    DB -.->|Validation Results| PostgreSQLClient
-    
-    %% Error Handling Flow
-    Validator -.->|Validation Errors| ErrorHandler
-    FieldMatcherSvc -.->|Match Errors| ErrorHandler
-    QueryGeneratorSvc -.->|Generation Errors| ErrorHandler
-    ErrorHandler -.->|Error Response| ResponseBuilder
-    
-    %% Observability Integration
-    MiddlewareStack --> RequestTracing
-    MiddlewareStack --> StructuredLogs
-    MiddlewareStack --> MetricsCollector
-    
-    Logger --> StructuredLogs
-    MetricsCollector --> PrometheusMetrics
-    RequestTracing --> APMTracing
-    
-    PrometheusMetrics --> Monitoring
-    StructuredLogs --> Monitoring
-    APMTracing --> Monitoring
-    
-    %% Health Check Flow
-    HealthHandler --> HealthChecker
-    HealthChecker --> CSVLoaderSvc
-    HealthChecker --> FieldMappingsCache
-    HealthChecker -.-> PostgreSQLClient
+    %% Processing Pipeline
+    QueryHandler -->|1. Find relevant fields| FieldMatcher
+    FieldMatcher --> FieldMappings
+    FieldMatcher -->|2. Extract keywords & match| NLPProcessor
+    NLPProcessor -->|3. Generate SQL| QueryBuilder
     
     %% Response Flow
-    ResponseBuilder -->|JSON Response| QueryHandler
-    QueryHandler -->|HTTP Response| GinEngine
-    GinEngine -->|Response| Gateway
-    Gateway --> LoadBalancer
-    LoadBalancer --> Client
+    QueryBuilder -->|"{ query: 'SELECT email FROM users;' }"| QueryHandler
+    QueryHandler --> GinServer
+    GinServer --> Client
     
-    %% Configuration Flow
-    AppConfig -->|Runtime Config| GinEngine
-    AppConfig --> FieldMatcherSvc
-    AppConfig --> NLPProcessorSvc
-    AppConfig --> QueryGeneratorSvc
-    
-    %% Middleware Components
-    subgraph "🛡️ Middleware Components"
-        CORSMiddleware[🌐 CORS Middleware]
-        LoggingMiddleware[📝 Logging Middleware]
-        AuthMiddleware[🔐 Auth Middleware]
-        RateLimitMiddleware[⏱️ Rate Limit Middleware]
-        MetricsMiddleware[📊 Metrics Middleware]
-        TimeoutMiddleware[⏰ Timeout Middleware]
+    %% Core Processing Details
+    subgraph "🧠 Processing Steps"
+        Step1[1. Parse description for keywords]
+        Step2[2. Fuzzy match against field descriptions]
+        Step3[3. Detect intent SELECT/COUNT/GROUP BY]
+        Step4[4. Build SQL query from matched fields]
+        Step5[5. Calculate confidence score]
     end
     
-    MiddlewareStack --> CORSMiddleware
-    MiddlewareStack --> LoggingMiddleware
-    MiddlewareStack --> AuthMiddleware
-    MiddlewareStack --> RateLimitMiddleware
-    MiddlewareStack --> MetricsMiddleware
-    MiddlewareStack --> TimeoutMiddleware
+    NLPProcessor --> Step1
+    Step1 --> Step2
+    Step2 --> Step3
+    Step3 --> Step4
+    Step4 --> Step5
+    Step5 --> QueryBuilder
     
     %% Styling
     classDef external fill:#e1f5fe,stroke:#01579b,stroke-width:2px
-    classDef infrastructure fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
     classDef goapp fill:#00add8,stroke:#0066cc,stroke-width:3px,color:#fff
-    classDef server fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
-    classDef handlers fill:#fff3e0,stroke:#e65100,stroke-width:2px
-    classDef services fill:#fce4ec,stroke:#880e4f,stroke-width:2px
-    classDef processing fill:#e0f2f1,stroke:#004d40,stroke-width:2px
+    classDef core fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef processing fill:#fff3e0,stroke:#e65100,stroke-width:2px
     classDef data fill:#f1f8e9,stroke:#33691e,stroke-width:2px
-    classDef utilities fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
-    classDef connectors fill:#fff8e1,stroke:#f57f17,stroke-width:2px
-    classDef observability fill:#e8eaf6,stroke:#3f51b5,stroke-width:2px
-    classDef middleware fill:#fce4ec,stroke:#c2185b,stroke-width:2px
     
-    class Client,CSV,DB,Monitoring external
-    class LoadBalancer,Gateway infrastructure
-    class GinEngine,Router,MiddlewareStack server
-    class HealthHandler,QueryHandler,FieldsHandler,MetricsHandler handlers
-    class AppConfig,FieldMatcherSvc,NLPProcessorSvc,QueryGeneratorSvc,CSVLoaderSvc services
-    class KeywordExtractor,FuzzyStringMatcher,IntentDetector,ConfidenceCalculator,SQLQueryBuilder processing
-    class CSVParser,FieldMappingsCache,QueryResultCache,ConfigStore data
-    class Logger,ErrorHandler,Validator,ResponseBuilder utilities
-    class PostgreSQLClient,MetricsCollector,HealthChecker connectors
-    class RequestTracing,StructuredLogs,PrometheusMetrics,APMTracing observability
-    class CORSMiddleware,LoggingMiddleware,AuthMiddleware,RateLimitMiddleware,MetricsMiddleware,TimeoutMiddleware middleware
+    class Client,CSV external
+    class GinServer,QueryHandler goapp
+    class CSVLoader,FieldMatcher,NLPProcessor,QueryBuilder core
+    class Step1,Step2,Step3,Step4,Step5 processing
+    class FieldMappings data
