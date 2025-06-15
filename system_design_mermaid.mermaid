@@ -1,0 +1,205 @@
+graph TB
+    %% External Components
+    Client[👤 Client Applications]
+    CSV[📊 field_mappings.csv]
+    DB[(🗄️ PostgreSQL Database)]
+    Monitoring[📊 Grafana/Prometheus]
+    
+    %% Load Balancer & Gateway
+    subgraph "🌐 Infrastructure"
+        LoadBalancer[⚖️ Load Balancer/nginx]
+        Gateway[🚪 API Gateway]
+    end
+    
+    %% Go Application
+    subgraph "🐹 Go Application (Gin Framework)"
+        subgraph "🚀 HTTP Server Layer"
+            GinEngine[🚀 Gin HTTP Engine]
+            Router[🔀 Gin Router]
+            MiddlewareStack[🛡️ Middleware Stack]
+        end
+        
+        subgraph "📋 HTTP Handlers"
+            HealthHandler[❤️ Health Handler]
+            QueryHandler[⚡ Query Generator Handler]
+            FieldsHandler[📋 Fields List Handler]
+            MetricsHandler[📊 Metrics Handler]
+        end
+        
+        subgraph "🏪 Application Services"
+            AppConfig[⚙️ Config Manager]
+            FieldMatcherSvc[🔍 Field Matcher Service]
+            NLPProcessorSvc[🎯 NLP Processor Service]
+            QueryGeneratorSvc[🏗️ Query Generator Service]
+            CSVLoaderSvc[📄 CSV Loader Service]
+        end
+        
+        subgraph "🧠 Processing Engines"
+            KeywordExtractor[📝 Keyword Extractor]
+            FuzzyStringMatcher[🎯 Fuzzy String Matcher]
+            IntentDetector[🧭 Intent Detector]
+            ConfidenceCalculator[📊 Confidence Calculator]
+            SQLQueryBuilder[🏗️ SQL Query Builder]
+        end
+        
+        subgraph "💾 Data Management"
+            CSVParser[📊 CSV Parser (stdlib)]
+            FieldMappingsCache[📦 Field Mappings Cache]
+            QueryResultCache[⚡ Query Result Cache]
+            ConfigStore[⚙️ Configuration Store]
+        end
+        
+        subgraph "🔧 Utilities & Helpers"
+            Logger[📝 Structured Logger]
+            ErrorHandler[❌ Error Handler]
+            Validator[✅ Input Validator]
+            ResponseBuilder[📋 Response Builder]
+        end
+        
+        subgraph "🔗 External Connectors"
+            PostgreSQLClient[🐘 PostgreSQL Client]
+            MetricsCollector[📊 Metrics Collector]
+            HealthChecker[❤️ Health Checker]
+        end
+    end
+    
+    %% Monitoring & Observability
+    subgraph "📊 Observability Stack"
+        RequestTracing[🔍 Request Tracing]
+        StructuredLogs[📝 Structured Logging]
+        PrometheusMetrics[📊 Prometheus Metrics]
+        APMTracing[🔄 APM/Distributed Tracing]
+    end
+    
+    %% Main Request Flow
+    Client -->|HTTP Requests| LoadBalancer
+    LoadBalancer --> Gateway
+    Gateway -->|Route to Instance| GinEngine
+    
+    %% Application Startup Flow
+    CSV -->|Load at Startup| CSVLoaderSvc
+    CSVLoaderSvc --> CSVParser
+    CSVParser -->|Parse & Validate| FieldMappingsCache
+    FieldMappingsCache --> FieldMatcherSvc
+    AppConfig --> ConfigStore
+    ConfigStore --> GinEngine
+    
+    %% HTTP Request Processing
+    GinEngine --> Router
+    Router --> MiddlewareStack
+    MiddlewareStack -->|CORS, Logging, Auth| HealthHandler
+    MiddlewareStack --> QueryHandler
+    MiddlewareStack --> FieldsHandler
+    MiddlewareStack --> MetricsHandler
+    
+    %% Query Generation Flow
+    QueryHandler -->|Validate Request| Validator
+    QueryHandler --> FieldMatcherSvc
+    QueryHandler --> NLPProcessorSvc
+    QueryHandler --> QueryGeneratorSvc
+    
+    %% Field Matching Pipeline
+    FieldMatcherSvc --> FieldMappingsCache
+    FieldMatcherSvc --> FuzzyStringMatcher
+    FieldMatcherSvc --> ConfidenceCalculator
+    
+    %% NLP Processing Pipeline
+    NLPProcessorSvc --> KeywordExtractor
+    NLPProcessorSvc --> IntentDetector
+    KeywordExtractor --> FuzzyStringMatcher
+    IntentDetector --> QueryGeneratorSvc
+    
+    %% Query Generation Pipeline
+    QueryGeneratorSvc --> SQLQueryBuilder
+    QueryGeneratorSvc --> ConfidenceCalculator
+    SQLQueryBuilder --> ResponseBuilder
+    
+    %% Caching Layer
+    FieldMatcherSvc --> QueryResultCache
+    QueryGeneratorSvc --> QueryResultCache
+    
+    %% Database Integration (Optional)
+    SQLQueryBuilder -.->|Validate Schema| PostgreSQLClient
+    PostgreSQLClient -.->|Schema Info| DB
+    DB -.->|Validation Results| PostgreSQLClient
+    
+    %% Error Handling Flow
+    Validator -.->|Validation Errors| ErrorHandler
+    FieldMatcherSvc -.->|Match Errors| ErrorHandler
+    QueryGeneratorSvc -.->|Generation Errors| ErrorHandler
+    ErrorHandler -.->|Error Response| ResponseBuilder
+    
+    %% Observability Integration
+    MiddlewareStack --> RequestTracing
+    MiddlewareStack --> StructuredLogs
+    MiddlewareStack --> MetricsCollector
+    
+    Logger --> StructuredLogs
+    MetricsCollector --> PrometheusMetrics
+    RequestTracing --> APMTracing
+    
+    PrometheusMetrics --> Monitoring
+    StructuredLogs --> Monitoring
+    APMTracing --> Monitoring
+    
+    %% Health Check Flow
+    HealthHandler --> HealthChecker
+    HealthChecker --> CSVLoaderSvc
+    HealthChecker --> FieldMappingsCache
+    HealthChecker -.-> PostgreSQLClient
+    
+    %% Response Flow
+    ResponseBuilder -->|JSON Response| QueryHandler
+    QueryHandler -->|HTTP Response| GinEngine
+    GinEngine -->|Response| Gateway
+    Gateway --> LoadBalancer
+    LoadBalancer --> Client
+    
+    %% Configuration Flow
+    AppConfig -->|Runtime Config| GinEngine
+    AppConfig --> FieldMatcherSvc
+    AppConfig --> NLPProcessorSvc
+    AppConfig --> QueryGeneratorSvc
+    
+    %% Middleware Components
+    subgraph "🛡️ Middleware Components"
+        CORSMiddleware[🌐 CORS Middleware]
+        LoggingMiddleware[📝 Logging Middleware]
+        AuthMiddleware[🔐 Auth Middleware]
+        RateLimitMiddleware[⏱️ Rate Limit Middleware]
+        MetricsMiddleware[📊 Metrics Middleware]
+        TimeoutMiddleware[⏰ Timeout Middleware]
+    end
+    
+    MiddlewareStack --> CORSMiddleware
+    MiddlewareStack --> LoggingMiddleware
+    MiddlewareStack --> AuthMiddleware
+    MiddlewareStack --> RateLimitMiddleware
+    MiddlewareStack --> MetricsMiddleware
+    MiddlewareStack --> TimeoutMiddleware
+    
+    %% Styling
+    classDef external fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef infrastructure fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef goapp fill:#00add8,stroke:#0066cc,stroke-width:3px,color:#fff
+    classDef server fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef handlers fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef services fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    classDef processing fill:#e0f2f1,stroke:#004d40,stroke-width:2px
+    classDef data fill:#f1f8e9,stroke:#33691e,stroke-width:2px
+    classDef utilities fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef connectors fill:#fff8e1,stroke:#f57f17,stroke-width:2px
+    classDef observability fill:#e8eaf6,stroke:#3f51b5,stroke-width:2px
+    classDef middleware fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    
+    class Client,CSV,DB,Monitoring external
+    class LoadBalancer,Gateway infrastructure
+    class GinEngine,Router,MiddlewareStack server
+    class HealthHandler,QueryHandler,FieldsHandler,MetricsHandler handlers
+    class AppConfig,FieldMatcherSvc,NLPProcessorSvc,QueryGeneratorSvc,CSVLoaderSvc services
+    class KeywordExtractor,FuzzyStringMatcher,IntentDetector,ConfidenceCalculator,SQLQueryBuilder processing
+    class CSVParser,FieldMappingsCache,QueryResultCache,ConfigStore data
+    class Logger,ErrorHandler,Validator,ResponseBuilder utilities
+    class PostgreSQLClient,MetricsCollector,HealthChecker connectors
+    class RequestTracing,StructuredLogs,PrometheusMetrics,APMTracing observability
+    class CORSMiddleware,LoggingMiddleware,AuthMiddleware,RateLimitMiddleware,MetricsMiddleware,TimeoutMiddleware middleware
