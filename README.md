@@ -1,4 +1,4 @@
-# PostgreSQL Query Generator API - Requirements Specification
+# GO Query API - Query Generator
 
 **Claude Code Build Instructions: Convert Natural Language to SQL using Go**
 
