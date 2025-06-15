@@ -13,10 +13,12 @@ graph TB
         CSVLoader[📄 CSV Loader]
         FieldMatcher[🔍 Field Matcher]
         NLPProcessor[🎯 NLP Processor]
+        JoinPathFinder[🔗 JOIN Path Finder]
         QueryBuilder[🏗️ SQL Query Builder]
         
         %% Data Storage
         FieldMappings[📦 Field Mappings Cache]
+        RelationshipGraph[🕸️ Table Relationship Graph]
     end
     
     %% Request Flow
@@ -24,17 +26,20 @@ graph TB
     GinServer --> QueryHandler
     
     %% Initialization Flow
-    CSV -->|Load on startup| CSVLoader
+    CSV -->|Load mappings & relationships| CSVLoader
     CSVLoader --> FieldMappings
+    CSVLoader --> RelationshipGraph
     
     %% Processing Pipeline
     QueryHandler -->|1. Find relevant fields| FieldMatcher
     FieldMatcher --> FieldMappings
     FieldMatcher -->|2. Extract keywords & match| NLPProcessor
-    NLPProcessor -->|3. Generate SQL| QueryBuilder
+    NLPProcessor -->|3. Determine tables needed| JoinPathFinder
+    JoinPathFinder --> RelationshipGraph
+    JoinPathFinder -->|4. Generate SQL with JOINs| QueryBuilder
     
     %% Response Flow
-    QueryBuilder -->|"{ query: 'SELECT email FROM users;' }"| QueryHandler
+    QueryBuilder -->|"{ query: 'SELECT DISTINCT u.email FROM users u JOIN orders o...', joins_used: [...] }"| QueryHandler
     QueryHandler --> GinServer
     GinServer --> Client
     
@@ -42,9 +47,11 @@ graph TB
     subgraph "🧠 Processing Steps"
         Step1[1. Parse description for keywords]
         Step2[2. Fuzzy match against field descriptions]
-        Step3[3. Detect intent SELECT/COUNT/GROUP BY]
-        Step4[4. Build SQL query from matched fields]
-        Step5[5. Calculate confidence score]
+        Step3[3. Detect intent: SELECT/COUNT/GROUP BY/DISTINCT]
+        Step4[4. Identify required tables from matched fields]
+        Step5[5. Find optimal JOIN path between tables]
+        Step6[6. Build SQL with JOINs and proper syntax]
+        Step7[7. Calculate confidence score]
     end
     
     NLPProcessor --> Step1
@@ -52,7 +59,9 @@ graph TB
     Step2 --> Step3
     Step3 --> Step4
     Step4 --> Step5
-    Step5 --> QueryBuilder
+    Step5 --> Step6
+    Step6 --> Step7
+    Step7 --> QueryBuilder
     
     %% Styling
     classDef external fill:#e1f5fe,stroke:#01579b,stroke-width:2px
@@ -64,5 +73,5 @@ graph TB
     class Client,CSV external
     class GinServer,QueryHandler goapp
     class CSVLoader,FieldMatcher,NLPProcessor,QueryBuilder core
-    class Step1,Step2,Step3,Step4,Step5 processing
-    class FieldMappings data
+    class Step1,Step2,Step3,Step4,Step5,Step6,Step7 processing
+    class FieldMappings,RelationshipGraph data
